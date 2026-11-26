@@ -35,7 +35,9 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
 #L{left:1%}#R{right:1%}
 .base{position:absolute;inset:16%;border-radius:50%;background:radial-gradient(circle at 50% 35%,#d3d8dc,#8b9299 60%,#555b61);border:3px solid #3d4146;box-shadow:0 4px 10px rgba(0,0,0,.4)}
 .base::before{content:"";position:absolute;inset:14%;border-radius:50%;background:repeating-radial-gradient(circle,#1b1b1b 0 4px,#444 4px 7px);box-shadow:inset 0 0 8px #000}
-.knob{position:absolute;left:30%;top:30%;width:40%;height:40%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff7b7b,#c62828 50%,#6d0c0c);border:3px solid #111;box-shadow:0 5px 8px rgba(0,0,0,.55)}
+.knob{position:absolute;left:30%;top:30%;width:40%;height:40%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff9a9a,#d32f2f 45%,#6d0c0c);border:3px solid #111;box-shadow:0 5px 8px rgba(0,0,0,.6)}
+
+
 .stick i{position:absolute;font-style:normal;font-size:calc(var(--u)*2.2);font-weight:700;line-height:1.1;color:var(--txt);background:var(--chip);border-radius:4px;padding:1px 4px;max-width:42%;text-align:center}
 .x .a{top:2%;left:0}.x .b{top:2%;right:0}.x .c{bottom:2%;left:0}.x .d{bottom:2%;right:0}
 .p .a{top:0;left:50%;transform:translateX(-50%)}.p .b{right:0;top:50%;transform:translateY(-50%)}.p .c{bottom:0;left:50%;transform:translateX(-50%)}.p .d{left:0;top:50%;transform:translateY(-50%)}
@@ -43,7 +45,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
 </head>
 <body>
 <div id="stage"><canvas id="c"></canvas><div id="vig"></div>
-<div id="hud"><span id="score">Bucket 0% | Truck 0%</span><button id="reset">Reset</button><button id="mode">Stick</button><button id="jk">Jhatka: Tez</button><button id="snd">🔊</button></div>
+<div id="hud"><span id="score">Bucket 0% | Truck 0%</span><button id="reset">Reset</button><button id="mode">Stick</button><button id="jk">Jhatka: Tez</button><button id="snd">🔊</button><button id="vw">🚁 Drone</button></div>
 <div id="thr"><span id="thv">Accelerator 60%</span><div id="thk"><div id="thf"></div><div id="tht"></div></div></div>
 <canvas id="mini" width="110" height="110"></canvas>
 <button id="horn">📯 HORN</button><div id="pc"></div>
@@ -57,17 +59,17 @@ const TX=-3.1,TZ=7.0,HX=1.5,HZ=2,IX=1.35,IZ=1.85,FL=.95,TH=2.3,TCAP=3,CAPV=.5,CV
 const NX=64,NZ=40,CS=.25;
 
 // ---------- scene ----------
-const cv=document.getElementById('c'),stage=document.getElementById('stage');let portrait=false;
-const ren=new THREE.WebGLRenderer({canvas:cv,antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio||1,2));ren.shadowMap.enabled=true;
+const cv=document.getElementById('c'),stage=document.getElementById('stage');let portrait=false,U=7,view='driver';
+const ren=new THREE.WebGLRenderer({canvas:cv,antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio||1,2));ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fd3ee);scene.fog=new THREE.Fog(0x9fd3ee,18,50);
 const cam=new THREE.PerspectiveCamera(65,16/9,.05,100);cam.rotation.order='YXZ';cam.position.set(0,2.45,.3);cam.rotation.y=Math.PI;cam.rotation.x=-.18;
 function resize(){const vw=innerWidth,vh=innerHeight;portrait=vh>vw;const aw=portrait?vh:vw,ah=portrait?vw:vh;let sw=aw,sh=aw*9/16;if(sh>ah){sh=ah;sw=ah*16/9}
-  stage.style.width=sw+'px';stage.style.height=sh+'px';stage.style.setProperty('--u',sh/100+'px');
+  stage.style.width=sw+'px';stage.style.height=sh+'px';U=sh/100;stage.style.setProperty('--u',sh/100+'px');
   stage.style.transform='translate(-50%,-50%) rotate('+(portrait?90:0)+'deg)';
-  ren.setSize(sw,sh,false);cam.aspect=16/9;cam.fov=clamp(2*Math.atan(Math.tan(58*RAD)/cam.aspect)/RAD,60,100);cam.updateProjectionMatrix()}
+  ren.setSize(sw,sh,false);cam.aspect=16/9;cam.fov=view==='drone'?50:clamp(2*Math.atan(Math.tan(58*RAD)/cam.aspect)/RAD,60,100);cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 scene.add(new THREE.HemisphereLight(0xffffff,0x6b4a2b,.95));
-const sun=new THREE.DirectionalLight(0xfff2d0,1.1);sun.position.set(-6,14,-4);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+const sun=new THREE.DirectionalLight(0xfff2d0,1.1);sun.position.set(-6,14,-4);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.bias=-.0006;sun.shadow.normalBias=.03;
 Object.assign(sun.shadow.camera,{left:-12,right:12,top:14,bottom:-8,near:1,far:40});scene.add(sun);
 const tc=document.createElement('canvas');tc.width=tc.height=256;const g2=tc.getContext('2d');g2.fillStyle='#8a6038';g2.fillRect(0,0,256,256);
 for(let i=0;i<3000;i++){g2.fillStyle='hsl(28,'+(30+Math.random()*20)+'%,'+(26+Math.random()*22)+'%)';g2.fillRect(Math.random()*256,Math.random()*256,3,3)}
@@ -79,7 +81,9 @@ const ground=new THREE.Mesh(new THREE.ShapeGeometry(gs).rotateX(-Math.PI/2),new 
 const tgeo=new THREE.PlaneGeometry(16,10,NX,NZ).rotateX(-Math.PI/2).translate(0,0,7.5);
 {const p=tgeo.attributes.position,uv=tgeo.attributes.uv;for(let k=0;k<p.count;k++)uv.setXY(k,p.getX(k),p.getZ(k));tgeo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(p.count*3),3))}
 const terrain=new THREE.Mesh(tgeo,new THREE.MeshStandardMaterial({map:gt,roughness:1,vertexColors:true}));terrain.receiveShadow=true;scene.add(terrain);
-for(let i=0;i<9;i++){const h=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*5,4+Math.random()*4,6),new THREE.MeshStandardMaterial({color:0x6f9a5a,flatShading:true}));h.position.set(-40+i*10,1,28+Math.random()*10);scene.add(h)}
+{const c=document.createElement('canvas');c.width=16;c.height=256;const g=c.getContext('2d'),gr=g.createLinearGradient(0,0,0,256);gr.addColorStop(0,'#4f8fd0');gr.addColorStop(.55,'#9cc8ea');gr.addColorStop(.8,'#e9dcc2');gr.addColorStop(1,'#d9b98a');g.fillStyle=gr;g.fillRect(0,0,16,256);scene.background=new THREE.CanvasTexture(c);scene.fog.color.set(0xd8c4a0)}
+for(let i=0;i<12;i++){const h=new THREE.Mesh(new THREE.ConeGeometry(9+Math.random()*6,3+Math.random()*3,18),new THREE.MeshStandardMaterial({color:0x9a8662,roughness:1}));h.position.set(-44+i*8,.8,34+Math.random()*8);scene.add(h)}
+for(let i=0;i<34;i++){const x=(Math.random()-.5)*34,z=Math.random()*24+.5;if((x>-9&&x<9&&z>2&&z<13)||(Math.abs(x)<3&&z<3.5))continue;const r=.15+Math.random()*.4,k=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),new THREE.MeshStandardMaterial({color:0x7d6f5d,roughness:1,flatShading:true}));k.position.set(x,r*.5,z);k.rotation.set(Math.random()*3,Math.random()*3,0);k.scale.y=.7;k.castShadow=true;scene.add(k)}
 const mat=(c,r=.6,m=.2)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
 const YEL=mat(0xf2b600),DK=mat(0x2b2b2b,.8),GR=mat(0x777c80),OR=mat(0xe67e22),BK=mat(0x15161a,.9),SOIL=mat(0x6b4526,1,0);
 function box(w,h,d,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o}
@@ -90,19 +94,63 @@ function sph(r,m,p){const o=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),m);
 box(2.4,.4,1.6,YEL,0,.75,1.4);box(.7,.4,.7,YEL,0,.8,PIV_Z);
 for(const s of[-1,1]){cyl(.95,.6,BK,s*1.5,.95,1.3);cyl(.45,.62,GR,s*1.5,.95,1.3);box(.25,1.6,.25,GR,s*1.4,.8,2.8);box(.6,.1,.6,DK,s*1.4,.05,2.8);box(.22,2.2,.22,DK,s*.9,2.3,.95)}
 box(2.0,.2,.22,DK,0,3.0,.95);
+box(1.6,.5,5.2,DK,0,.55,-.3);box(2.1,.2,1.9,DK,0,.83,.18);box(2.0,1.0,1.7,YEL,0,1.4,-1.8);box(1.6,.7,.05,DK,0,1.3,-2.67);
+box(.6,.5,.6,DK,0,1.3,-.2);box(.6,.8,.12,DK,0,1.75,-.5);box(.1,.7,.1,DK,0,1.35,-.9);
+for(const s of[-1,1]){cyl(.62,.45,BK,s*1.35,.62,-2.2);cyl(.3,.47,GR,s*1.35,.62,-2.2);for(let i=0;i<16;i++){const a=i/16*Math.PI*2,l=box(.46,.1,.14,BK,s*1.35,.62+.63*Math.sin(a),-2.2+.63*Math.cos(a));l.rotation.x=-a}}
+
+const cabG=new THREE.Group();cabG.visible=false;scene.add(cabG);
+const GL=new THREE.MeshStandardMaterial({color:0x9fd3ee,roughness:.1,metalness:.5,transparent:true,opacity:.25,depthWrite:false});
+box(2.1,.12,1.9,YEL,0,3.1,.18,cabG);
+function glass(w,h,d,x,y,z){const o=box(w,h,d,GL,x,y,z,cabG);o.castShadow=o.receiveShadow=false;o.renderOrder=2;return o}
+for(const s of[-1,1]){glass(.04,1.8,1.5,s*1.08,2.1,.18);box(.18,2.1,.18,DK,s*.95,2.1,-.6,cabG)}
+glass(1.8,1.8,.04,0,2.1,-.74);glass(1.8,1.8,.04,0,2.1,1.1);
+{const p=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,2.2,10),DK);p.position.set(1.3,2.0,1.6);p.castShadow=true;scene.add(p)}
 // backhoe arm
 const swingG=new THREE.Group();swingG.position.set(0,PIV_Y,PIV_Z);scene.add(swingG);
-const boomG=new THREE.Group();swingG.add(boomG);box(.3,.36,LB,YEL,0,0,LB/2,boomG);
-const dipG=new THREE.Group();dipG.position.z=LB;boomG.add(dipG);box(.24,.3,LD,YEL,0,0,LD/2,dipG);
+// ---- realistic backhoe parts: tapered beams, JCB decal, hydraulic cylinders ----
+const YP=new THREE.MeshStandardMaterial({color:0xf2b600,roughness:.42,metalness:.35}),CHR=mat(0xd8dde0,.2,.9);
+const jc=document.createElement('canvas');jc.width=256;jc.height=64;{const g=jc.getContext('2d');g.fillStyle='#f2b600';g.fillRect(0,0,256,64);g.fillStyle='#111';g.font='bold 52px Arial Black,Arial,sans-serif';g.textAlign='center';g.fillText('JCB',128,50)}
+const JT=new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(jc),roughness:.5,metalness:.3});
+function beam(len,h0,h1,w,m,p){const s=new THREE.Shape();s.moveTo(0,-h0/2);s.lineTo(len,-h1/2);s.lineTo(len,h1/2);s.lineTo(0,h0/2);s.closePath();
+  const o=new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth:w,bevelEnabled:true,bevelSize:.03,bevelThickness:.03,bevelSegments:2}).rotateY(-Math.PI/2).translate(w/2,0,0),m);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+function topDecal(p,y,z,w,h){const d=new THREE.Mesh(new THREE.PlaneGeometry(w,h),JT);d.rotation.set(-Math.PI/2,0,-Math.PI/2);d.position.set(0,y,z);p.add(d)}
+const cyls=[];
+function anch(p,x,y,z){const o=new THREE.Object3D();o.position.set(x,y,z);p.add(o);return o}
+function mkCyl(a,b,r){const g=new THREE.Group(),ba=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,12).rotateX(Math.PI/2),YP),ro=new THREE.Mesh(new THREE.CylinderGeometry(r*.55,r*.55,1,10).rotateX(Math.PI/2),CHR);ba.castShadow=true;g.add(ba,ro);scene.add(g);cyls.push({g,ba,ro,a,b})}
+function updCyl(c){c.a.getWorldPosition(v1);c.b.getWorldPosition(v2);const d=v1.distanceTo(v2);c.g.position.copy(v1);c.g.lookAt(v2);c.ba.scale.z=d*.55;c.ba.position.z=d*.275;c.ro.scale.z=d*.5;c.ro.position.z=d*.75}
+const boomG=new THREE.Group();swingG.add(boomG);box(.46,.74,.5,YP,0,-.05,.2,boomG);
+{const s1=new THREE.Group();s1.rotation.x=-.14;boomG.add(s1);beam(2.0,.62,.5,.34,YP,s1);topDecal(s1,.325,1.0,1.0,.24);
+  const s2=new THREE.Group();s2.position.z=2.0;s2.rotation.x=.334;s1.add(s2);beam(1.447,.5,.4,.3,YP,s2)}
+const dipG=new THREE.Group();dipG.position.z=LB;boomG.add(dipG);beam(LD,.4,.26,.24,YP,dipG);
 const buckG=new THREE.Group();buckG.position.z=LD;dipG.add(buckG);
-for(const g of[boomG,dipG,buckG])sph(.2,DK,g);
-const BM=mat(0x4a4d52,.5,.5),bs=new THREE.Shape();bs.moveTo(0,0);bs.lineTo(1.2,0);bs.lineTo(.24,-.84);bs.closePath();
+for(const g of[boomG,dipG,buckG])cyl(.2,.56,DK,0,0,0,g);
+const BM=mat(0x4a4d52,.5,.5),bs=new THREE.Shape();bs.moveTo(0,0);bs.lineTo(1.2,0);bs.quadraticCurveTo(.95,-.62,.24,-.84);bs.closePath();
 const sg=new THREE.ExtrudeGeometry(bs,{depth:.06,bevelEnabled:false});sg.rotateY(-Math.PI/2);
 for(const x of[.55,-.49]){const m=new THREE.Mesh(sg,BM);m.position.x=x;m.castShadow=true;buckG.add(m)}
-box(1.1,.05,1.2,BM,0,.025,.6,buckG);const fl0=box(1.1,.05,1.28,BM,0,-.42,.72,buckG);fl0.rotation.x=-Math.atan2(.84,.96);
-for(const k of[-.4,-.13,.13,.4]){const t=box(.09,.1,.26,GR,k,-.926,.142,buckG);t.rotation.x=Math.PI-Math.atan2(.84,.96)}
+box(1.1,.05,1.2,BM,0,.025,.6,buckG);
+{let pz=1.2,py=0;for(let i=1;i<=8;i++){const t=i/8,z=(1-t)*(1-t)*1.2+2*t*(1-t)*.95+t*t*.24,y=-2*t*(1-t)*.62-t*t*.84,dz=z-pz,dy=y-py,b=box(1.1,.05,Math.hypot(dz,dy)+.02,BM,0,(y+py)/2,(z+pz)/2,buckG);b.rotation.x=-Math.atan2(dy,dz);pz=z;py=y}}
+for(const k of[-.4,-.13,.13,.4]){const t=box(.09,.1,.28,GR,k,-.878,.116,buckG);t.rotation.x=Math.PI-.3}
 const tip=new THREE.Object3D();tip.position.set(0,0,LT);buckG.add(tip);
-const cc=new THREE.Object3D();cc.position.set(0,-1.01,.045);buckG.add(cc);
+const cc=new THREE.Object3D();cc.position.set(0,-.92,-.02);buckG.add(cc);
+mkCyl(anch(swingG,0,-.5,.5),anch(boomG,0,-.4,1.6),.09);mkCyl(anch(boomG,0,.55,2.2),anch(dipG,0,.35,.55),.08);mkCyl(anch(dipG,0,.32,1.5),anch(buckG,0,.25,.2),.07);
+// ---- front loader: tapered arms, wide bucket with teeth, lift/tilt cylinders, fenders, lights ----
+{const bk=new THREE.Group();bk.position.set(0,.05,-4.75);bk.rotation.y=Math.PI;scene.add(bk);
+  box(2.4,.07,1.05,YP,0,.035,.525,bk);box(2.4,.85,.07,YP,0,.45,-.03,bk);box(2.4,.08,.2,YP,0,.88,-.02,bk);box(2.4,.05,.1,GR,0,.03,1.07,bk);
+  for(let i=-3;i<=3;i++)box(.13,.09,.25,GR,i*.36,.045,1.13,bk);
+  const ts=new THREE.Shape();ts.moveTo(-.06,0);ts.lineTo(1.05,0);ts.lineTo(-.06,.9);ts.closePath();
+  const tg2=new THREE.ExtrudeGeometry(ts,{depth:.07,bevelEnabled:false}).rotateY(-Math.PI/2);
+  for(const x of[1.2,-1.13]){const m=new THREE.Mesh(tg2,YP);m.position.x=x;m.castShadow=true;bk.add(m)}
+  for(const s of[-1,1]){const a=new THREE.Group();a.position.set(s*1.12,1.75,-.9);a.rotation.set(-Math.atan2(1.25,4),Math.PI,0);scene.add(a);
+    beam(Math.hypot(1.25,4),.4,.26,.16,YP,a);cyl(.11,.3,DK,0,0,0,a);
+    cyl(.1,.4,DK,s*1.12,.5,-4.9);
+    mkCyl(anch(scene,s*.8,.95,-1.45),anch(a,0,-.12,1.7),.08);
+    mkCyl(anch(a,0,.2,2.3),anch(bk,s*.5,.8,-.05),.07);
+    box(.75,.1,1.6,YP,s*1.35,1.4,-2.2);
+    box(.4,.22,.06,mat(0xfff8d0,.2,0),s*.7,1.15,-2.7);
+    box(.05,.35,.22,DK,s*1.18,2.3,-.5);
+    box(.3,.04,.04,DK,s*1.05,2.3,-.5)}
+  for(let i=0;i<5;i++)box(1.3,.06,.05,CHR,0,.98+i*.1,-2.71);
+  {const ex=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.3,10),DK);ex.position.set(.8,2.55,-1.4);ex.castShadow=true;scene.add(ex)}}
 // soil carried inside the bucket (level stays horizontal in the world)
 const fillGeo=new THREE.BufferGeometry(),fa=new Float32Array(108);fillGeo.setAttribute('position',new THREE.BufferAttribute(fa,3));fillGeo.setDrawRange(0,0);
 const fillMesh=new THREE.Mesh(fillGeo,new THREE.MeshStandardMaterial({color:0x6b4526,roughness:1,side:THREE.DoubleSide}));fillMesh.frustumCulled=false;buckG.add(fillMesh);
@@ -111,7 +159,10 @@ const trk=new THREE.Group();trk.position.set(TX,0,TZ);scene.add(trk);
 box(3,.2,4,OR,0,.85,0,trk);box(3,.4,4.8,DK,0,.5,.4,trk);
 for(const s of[-1,1]){box(.15,1.35,4,OR,s*(IX+.075),1.625,0,trk);box(3,1.35,.15,OR,0,1.625,s*(IZ+.075),trk)}
 box(2.8,2,1.6,OR,0,1.5,3.2,trk);box(2.4,.8,.1,mat(0x9fd3ee,.1,.6),0,1.9,4.02,trk);
-for(const z of[-1.2,1.2,3.0])for(const s of[-1,1])cyl(.6,.4,BK,s*1.45,.6,z,trk);
+for(const z of[-1.2,1.2,3.0])for(const s of[-1,1]){cyl(.6,.4,BK,s*1.45,.6,z,trk);cyl(.3,.42,GR,s*1.45,.6,z,trk)}
+for(const z of[-1.2,-.4,.4,1.2])for(const s of[-1,1])box(.05,1.2,.12,mat(0xc0651a,.6,.2),s*(IX+.17),1.6,z,trk);
+for(const s of[-1,1]){box(.35,.2,.08,mat(0xffffcc,.2,0),s*.9,1.0,4.05,trk);box(.25,.18,.08,mat(0xcc1111,.4,0),s*1.3,.75,-2.45,trk)}
+{const ex=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,1.4,10),DK);ex.position.set(1.3,2.9,2.7);trk.add(ex)}
 const mound=new THREE.Mesh(new THREE.BoxGeometry(2*IX-.1,1,2*IZ-.1),SOIL);mound.visible=false;trk.add(mound);
 const dome=new THREE.Mesh(new THREE.SphereGeometry(1,22,10,0,Math.PI*2,0,Math.PI/2),SOIL);dome.visible=false;dome.scale.set(IX-.03,.2,IZ-.03);trk.add(dome);
 // falling soil chunks
@@ -120,7 +171,7 @@ const cx=new Float32Array(NC),cy=new Float32Array(NC),cz=new Float32Array(NC),cv
 
 // ---------- soil terrain ----------
 const H=new Float32Array((NX+1)*(NZ+1));let dirty=true;
-let tState='idle',tT=0,tz=TZ,leakAcc=0,digNow=false,wasReady=false;const here=()=>tState==='idle';
+let tState='idle',tT=0,tz=TZ,tz0=TZ,leakAcc=0,digNow=false,wasReady=false;const here=()=>tState==='idle';
 const inZone=(x,z)=>x>-8&&x<8&&z>2.5&&z<12.5,inTruck=(x,z)=>here()&&Math.abs(x-TX)<HX+.7&&Math.abs(z-tz)<HZ+.7;
 function hAt(x,z){const fx=(x+8)/CS,fz=(z-2.5)/CS;if(fx<0||fz<0||fx>=NX||fz>=NZ)return 0;const i=fx|0,j=fz|0,a=fx-i,b=fz-j,W=NX+1,k=j*W+i;
   return(H[k]*(1-a)+H[k+1]*a)*(1-b)+(H[k+W]*(1-a)+H[k+W+1]*a)*b}
@@ -163,11 +214,31 @@ const SP={boom:40,dip:55,buck:75,swing:35},vel={boom:0,dip:0,buck:0,swing:0};
 const v1=new THREE.Vector3(),v2=new THREE.Vector3(),v3=new THREE.Vector3(),v4=new THREE.Vector3();
 const bob={swing:0,boom:0,dip:0,buck:0};
 function pose(){swingG.rotation.y=-(A.swing+bob.swing)*RAD;boomG.rotation.x=(A.boom+bob.boom)*RAD;dipG.rotation.x=(A.dip+bob.dip)*RAD;buckG.rotation.x=(A.buck+bob.buck)*RAD}
-function fl(p){if(here()){const ax=Math.abs(p.x-TX),az=Math.abs(p.z-TZ);if(ax<IX&&az<IZ)return FL;if(ax<HX&&az<HZ)return TH}return inZone(p.x,p.z)?-1.4:.02}
-function viol(){swingG.updateMatrixWorld(true);tip.getWorldPosition(v1);cc.getWorldPosition(v2);buckG.getWorldPosition(v3);dipG.getWorldPosition(v4);
-  return Math.max(0,fl(v1)-v1.y)+Math.max(0,fl(v2)-v2.y)+Math.max(0,hAt(v3.x,v3.z)+.12-v3.y)+Math.max(0,hAt(v4.x,v4.z)+.3-v4.y)}
+function fl(p){return inZone(p.x,p.z)?-1.4:.02}
+// arm sample points (boom, dipper, bucket) used for collision with the truck
+const smp=[];for(let i=0;i<22;i++)smp.push(new THREE.Vector3());
+// more sample points (bucket corners, boom and dipper) so the side never sinks into the truck
+const SB=[[.55,0,.3],[-.55,0,.3],[.55,0,1.15],[-.55,0,1.15],[.55,-.5,.5],[-.55,-.5,.5],[.55,-.8,.15],[-.55,-.8,.15],[0,0,.6]];
+function samples(){swingG.updateMatrixWorld(true);dipG.getWorldPosition(smp[0]);buckG.getWorldPosition(smp[1]);tip.getWorldPosition(smp[2]);cc.getWorldPosition(smp[3]);
+  swingG.getWorldPosition(v3);let k=4;for(const t of[.25,.5,.75])smp[k++].copy(v3).lerp(smp[0],t);
+  for(const t of[.25,.5,.75])smp[k++].copy(smp[0]).lerp(smp[1],t);
+  for(const b of SB)buckG.localToWorld(smp[k++].set(b[0],b[1],b[2]))}
+function samplesOld(){swingG.updateMatrixWorld(true);swingG.getWorldPosition(smp[0]);dipG.getWorldPosition(smp[1]);buckG.getWorldPosition(smp[3]);tip.getWorldPosition(smp[5]);cc.getWorldPosition(smp[6]);
+  smp[0].lerp(smp[1],.5);smp[2].copy(smp[1]).lerp(smp[3],.5);smp[4].copy(smp[3]).lerp(smp[5],.5)}
+function tpen(p){if(!here())return 0;const ax=Math.abs(p.x-TX),az=Math.abs(p.z-tz),m=.1;
+  if(ax<HX+m&&az<HZ+m&&p.y<TH+m){if(ax<IX-m&&az<IZ-m)return Math.max(0,FL+m-p.y);return Math.min(TH+m-p.y,HX+m-ax,HZ+m-az)}
+  if(ax<1.4+m&&p.z>tz+2.4-m&&p.z<tz+4+m&&p.y<2.6+m)return Math.min(2.6+m-p.y,1.4+m-ax,p.z-(tz+2.4-m),tz+4+m-p.z);
+  return 0}
+// pushing the truck from behind makes it roll forward; side/top hits just block the arm
+function tryPush(){if(!here())return false;let push=0;
+  for(const p of smp){const ax=Math.abs(p.x-TX),az=Math.abs(p.z-tz),m=.1;
+    if(ax<HX+m&&az<HZ+m&&p.y<TH+m&&!(ax<IX-m&&az<IZ-m)&&p.z<tz){const rz=p.z-(tz-HZ-m),rt=TH+m-p.y,rx=HX+m-ax;if(rz<rt&&rz<rx)push=Math.max(push,rz+.02)}}
+  if(push>0&&tz+push<=TZ+9){tz+=push;trk.position.z=tz;return true}return false}
+function viol(){samples();
+  let v=Math.max(0,hAt(smp[1].x,smp[1].z)+.12-smp[1].y)+Math.max(0,hAt(smp[0].x,smp[0].z)+.3-smp[0].y);for(const p of smp){v+=Math.max(0,fl(p)-p.y)+tpen(p)}return v}
 // move is allowed if it is valid OR does not push deeper into the ground/truck (so the arm can never get stuck)
-function joint(k,d){const o=A[k],v0=k==='swing'?0:viol();A[k]=clamp(o+d,lim[k][0],lim[k][1]);pose();if(k!=='swing'){const v=viol();if(v>=.02&&v>v0+1e-4){A[k]=o;pose()}}}
+function joint(k,d){const o=A[k],v0=viol();A[k]=clamp(o+d,lim[k][0],lim[k][1]);pose();let v=viol();
+  if(v>=.02&&v>v0+1e-4){if(tryPush())v=viol();if(v>=.02&&v>v0+1e-4){A[k]=o;pose()}}}
 // JCB force: if the arm ends up buried (swing into hard ground / truck came back), it lifts itself out
 function resolve(dt){const v=viol();if(v<.02)return;const ob=A.boom;A.boom=Math.max(lim.boom[0],ob-120*dt);pose();
   if(viol()>=v-1e-4){A.boom=ob;const od=A.dip;A.dip=Math.min(lim.dip[1],od+80*dt);pose();if(viol()>=v-1e-4){A.dip=od;pose()}}}
@@ -194,6 +265,10 @@ function jerkStep(dt){if(!jerk)return;jerk.t+=dt;const t=jerk.t,m=jerk.m,e=Math.
   if(t>.7){jerk=null;for(const k in bob)bob[k]=0}}
 
 // ---------- digging, bucket load, pouring ----------
+const dustM=new THREE.InstancedMesh(new THREE.SphereGeometry(.25,8,6),new THREE.MeshBasicMaterial({color:0xb89a6a,transparent:true,opacity:.32,depthWrite:false}),48);dustM.frustumCulled=false;scene.add(dustM);
+const du=[];for(let i=0;i<48;i++)du.push({t:9,x:0,y:0,z:0,vx:0,vz:0});let dI2=0;
+function puff(x,y,z,n){for(let k=0;k<n;k++){const d=du[dI2++%48];d.t=0;d.x=x+(Math.random()-.5)*.4;d.y=y;d.z=z+(Math.random()-.5)*.4;d.vx=(Math.random()-.5)*.5;d.vz=(Math.random()-.5)*.5}}
+function dust(dt){for(let i=0;i<48;i++){const d=du[i];d.t+=dt;const s=d.t<2?Math.sin(Math.min(1,d.t/2)*Math.PI)*(.6+d.t*.6):0;dm.position.set(d.x+d.vx*d.t,d.y+d.t*.5,d.z+d.vz*d.t);dm.scale.setScalar(s+.001);dm.updateMatrix();dustM.setMatrixAt(i,dm.matrix)}dustM.instanceMatrix.needsUpdate=true}
 let load=0,truckVol=0,emitAcc=0,done=false;
 const TRI=[[0,0],[1.2,0],[.24,-.84]],TA=.504;
 function clip(poly,g,L){const out=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=a[0]*g[0]+a[1]*g[1]-L,db=b[0]*g[0]+b[1]*g[1]-L;
@@ -209,7 +284,7 @@ function updFill(gv){let n=0;
   fillGeo.setDrawRange(0,n);fillGeo.attributes.position.needsUpdate=true;fillGeo.computeVertexNormals()}
 function digStep(dt,sf){if(load>=1||sf<.05)return;
   for(const o of[cc,tip]){o.getWorldPosition(v1);if(!inZone(v1.x,v1.z)||inTruck(v1.x,v1.z))continue;
-    if(v1.y<hAt(v1.x,v1.z)+.04){const vol=mod(v1.x,v1.z,.9*sf*dt,.5,-1);load=Math.min(1,load+vol/CAPV);if(vol>0)digNow=true}}}
+    if(v1.y<hAt(v1.x,v1.z)+.04){const vol=mod(v1.x,v1.z,.9*sf*dt,.5,-1);load=Math.min(1,load+vol/CAPV);if(vol>0){digNow=true;if(Math.random()<.35)puff(v1.x,Math.max(0,hAt(v1.x,v1.z)),v1.z,1)}}}}
 const tv=new THREE.Vector3();
 function emitAt(x,y,z,vx,vy,vz){const i=ca.indexOf(0);if(i<0)return;cx[i]=x;cy[i]=y;cz[i]=z;cvx[i]=vx;cvy[i]=vy;cvz[i]=vz;ca[i]=1}
 function emit(){tv.set(0,-.42,.12).applyMatrix4(buckG.matrixWorld);emitAt(tv.x,tv.y,tv.z,(Math.random()-.5)*.6,-.5,(Math.random()-.5)*.6)}
@@ -220,7 +295,7 @@ function chunks(dt){for(let i=0;i<NC;i++){if(!ca[i])continue;cvy[i]-=9.8*dt;cx[i
   const ax=Math.abs(cx[i]-TX),az=Math.abs(cz[i]-tz),on=here(),inner=on&&ax<IX&&az<IZ;
   if(inner&&cy[i]<=truckTop()){truckVol+=CV;ca[i]=0}
   else if(on&&!inner&&ax<HX&&az<HZ&&cy[i]<=TH)ca[i]=0
-  else if(cy[i]<=hAt(cx[i],cz[i])){if(inZone(cx[i],cz[i])&&!inTruck(cx[i],cz[i]))mod(cx[i],cz[i],.1,.35,1);ca[i]=0}
+  else if(cy[i]<=hAt(cx[i],cz[i])){if(inZone(cx[i],cz[i])&&!inTruck(cx[i],cz[i]))mod(cx[i],cz[i],.1,.35,1);if(Math.random()<.3)puff(cx[i],Math.max(0,cy[i]),cz[i],1);ca[i]=0}
   else if(cy[i]<-3)ca[i]=0}}
 const m4=new THREE.Matrix4(),R3=new THREE.Matrix3(),Ri=new THREE.Matrix3(),gv=new THREE.Vector3(),dm=new THREE.Object3D();
 function reset(){H.fill(0);dirty=true;load=0;truckVol=0;ca.fill(0);emitAcc=0;tState='idle';tz=TZ;trk.visible=true;trk.position.z=TZ;trk.rotation.x=0;A.boom=-45;A.dip=110;A.buck=70;A.swing=0;pose()}
@@ -248,18 +323,18 @@ function update(dt){
   if(here()&&f>1.4){leakAcc+=(f-1.4)*25*dt;while(leakAcc>=1){leakAcc--;truckVol-=CV;const s=Math.random()<.5?-1:1;
     if(Math.random()<.5)emitAt(TX+s*(HX+.08),truckTop()+.1,tz+(Math.random()-.5)*2*IZ,s*1.2,0,0);else emitAt(TX+(Math.random()-.5)*2*IX,truckTop()+.1,tz+s*(HZ+.08),0,0,s*1.2)}}
   const ready=here()&&f>=1;document.getElementById('horn').classList.toggle('ready',ready);if(ready&&!wasReady)flash('Truck full! 📯 Horn dabao','#2e7d32');wasReady=ready;
-  audio(dt,sf,digNow);
+  audio(dt,sf,digNow);dust(dt);
   document.getElementById('score').textContent='Bucket '+Math.round(load*100)+'% | Truck '+Math.round(f*100)+'%'+(f>1.02?' OVERLOAD':'');
   
 }
 // ---------- truck leave / return (only after horn) ----------
 function truckAnim(dt){
-  if(tState==='idle'){trk.position.z=TZ;return}
+  if(tState==='idle'){trk.position.z=tz;return}
   tT+=dt;
-  if(tState==='out'){const u=Math.min(1,tT/2.2);tz=TZ+u*u*TFAR;trk.position.z=tz;trk.rotation.x=Math.sin(tT*16)*.012*u;
+  if(tState==='out'){const u=Math.min(1,tT/2.2);tz=tz0+u*u*TFAR;trk.position.z=tz;if(Math.random()<.6)puff(TX+(Math.random()<.5?-1.4:1.4),.3,tz-1.5,1);trk.rotation.x=Math.sin(tT*16)*.012*u;
     if(u>=1){tState='gone';tT=0;trk.visible=false;truckVol=0;leakAcc=0}}
   else if(tState==='gone'){if(tT>1){tState='in';tT=0;trk.visible=true}}
-  else{const u=Math.min(1,tT/2.4),e=1-(1-u)*(1-u);tz=TZ+(1-e)*TFAR;trk.position.z=tz;trk.rotation.x=Math.sin(tT*16)*.012*(1-u);
+  else{const u=Math.min(1,tT/2.4),e=1-(1-u)*(1-u);tz=TZ+(1-e)*TFAR;trk.position.z=tz;if(u<1&&Math.random()<.6)puff(TX+(Math.random()<.5?-1.4:1.4),.3,tz+1.5,1);trk.rotation.x=Math.sin(tT*16)*.012*(1-u);
     if(u>=1){tState='idle';tz=TZ;trk.rotation.x=0}}}
 // ---------- accelerator (throttle) slider: scales the speed of every function ----------
 let thr=.6;const thk=document.getElementById('thk');
@@ -267,6 +342,15 @@ function setThr(f){thr=clamp(f,0,1);document.getElementById('thf').style.width=t
 function thrPtr(e){const r=thk.getBoundingClientRect();setThr(portrait?(e.clientY-r.top)/r.height:(e.clientX-r.left)/r.width)}
 thk.addEventListener('pointerdown',e=>{thk.setPointerCapture(e.pointerId);thrPtr(e);e.preventDefault()});
 thk.addEventListener('pointermove',e=>{if(thk.hasPointerCapture(e.pointerId))thrPtr(e)});
+// ---------- camera view: driver seat / drone ----------
+let dAng=2.5,dEl=.55;const DT=new THREE.Vector3(0,1,3);
+function applyCam(){if(view==='drone'){const R=15.3,ce=Math.cos(dEl);cam.position.set(DT.x+R*ce*Math.sin(dAng),DT.y+R*Math.sin(dEl),DT.z+R*ce*Math.cos(dAng));cam.lookAt(DT)}else{cam.position.set(0,2.45,.3);cam.rotation.set(-.18,Math.PI,0)}}
+function setView(v){view=v;const dr=v==='drone';cabG.visible=dr;document.getElementById('vig').style.display=dr?'none':'block';document.getElementById('vw').textContent=dr?'🧑‍✈️ Driver':'🚁 Drone';applyCam();resize()}
+document.getElementById('vw').onclick=()=>setView(view==='drone'?'driver':'drone');
+let drag=null;
+cv.addEventListener('pointerdown',e=>{if(view==='drone'){drag={id:e.pointerId,x:portrait?e.clientY:e.clientX,y:portrait?-e.clientX:e.clientY};cv.setPointerCapture(e.pointerId)}});
+cv.addEventListener('pointermove',e=>{if(drag&&e.pointerId===drag.id){const x=portrait?e.clientY:e.clientX,y=portrait?-e.clientX:e.clientY;dAng-=(x-drag.x)*.008;dEl=clamp(dEl+(y-drag.y)*.008,.12,1.45);drag.x=x;drag.y=y;applyCam()}});
+cv.addEventListener('pointerup',()=>{drag=null});
 // ---------- sound ----------
 let AC=null,snd={},muted=false;
 function initAudio(){if(AC){if(AC.state==='suspended')AC.resume();return}
@@ -298,7 +382,7 @@ addEventListener('pointerdown',initAudio);
 document.getElementById('snd').onclick=function(){muted=!muted;this.textContent=muted?'🔇':'🔊';initAudio();if(snd.master)snd.master.gain.value=muted?0:.5};
 const hornBtn=document.getElementById('horn');
 hornBtn.addEventListener('pointerdown',e=>{initAudio();hornOn(true);e.preventDefault();
-  if(tState==='idle'){if(truckVol>=TCAP*.3){tState='out';tT=0}else flash('Pehle truck me mitti bharo','#555')}});
+  if(tState==='idle'){if(truckVol>=TCAP*.3){tz0=tz;tState='out';tT=0}else flash('Pehle truck me mitti bharo','#555')}});
 ['pointerup','pointercancel','pointerleave'].forEach(n=>hornBtn.addEventListener(n,()=>hornOn(false)));
 // mini top view (screen-left = left in cab view)
 const mc=document.getElementById('mini').getContext('2d');
@@ -310,7 +394,7 @@ function mini(){const X=x=>55-x*6.5,Z=z=>104-z*7.5;mc.clearRect(0,0,110,110);mc.
   mc.fillStyle='#fff';mc.font='bold 10px system-ui,sans-serif';mc.fillText('Mitti',4,12);mc.fillText('Truck',74,12)}
 pose();
 let last=performance.now();
-function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);mini();ren.render(scene,cam);requestAnimationFrame(frame)}
+function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);mini();for(const c of cyls)updCyl(c);ren.render(scene,cam);requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 </script>
 </body>
